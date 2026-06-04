@@ -2,24 +2,467 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>GAMER MG RUNNER</title>
-</head>
-<body>
-    <!-- Sound Effects -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Audio Files -->
     <audio id="sfx-buy" src="buy.mp3"></audio>
     <audio id="sfx-coin" src="coin.mp3"></audio>
     <audio id="sfx-die" src="die.mp3"></audio>
     <audio id="sfx-jump" src="jump.mp3"></audio>
     <audio id="sfx-start" src="start.mp3"></audio>
 
-    <script>
-        function playSound(id) {
-            let sound = document.getElementById(id);
-            sound.currentTime = 0;
-            sound.play();
+    <!-- Google Search Engine Optimization (SEO) Tags -->
+    <title>GAMER MG RUNNER</title>
+    <meta name="description" content="Play GAMER MG RUNNER - The official online endless runner game by MG gamer 96. Avoid obstacles, collect coins, and unlock the legendary Rainbow skin!">
+    <meta name="keywords" content="Gamer MG Runner, MG gamer 96, MG gamer game, play mg runner, online runner game, minecraft pixel art gamer, free web games">
+    <meta name="author" content="MG gamer 96">
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            overflow: hidden;
+            color: white;
+            width: 100vw;
+            height: 100vh;
         }
+        #gameCanvas {
+            background-color: #70c5ce;
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        /* Screens Styles */
+        .popup-screen {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ffcc00;
+            padding: 20px;
+            border-radius: 15px;
+            width: 92%;
+            max-width: 350px;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            max-height: 95vh;
+            overflow: hidden;
+        }
+        .btn {
+            background-color: #ffcc00;
+            color: black;
+            border: none;
+            padding: 12px 15px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin: 6px 0;
+            cursor: pointer;
+            width: 100%;
+        }
+        .home-btn { background-color: #00ffcc; color: black; }
+        .play-btn { background-color: #5c940d; color: white; font-size: 18px; padding: 14px; }
+        
+        /* Shop Layout */
+        .shop-container {
+            margin-top: 10px;
+            border-top: 2px dashed #555;
+            padding-top: 8px;
+        }
+        .color-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2a2a2a;
+            padding: 7px 10px;
+            margin: 4px 0;
+            border-radius: 6px;
+        }
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid #fff;
+        }
+        /* Rainbow Animation Preview */
+        .rainbow-preview {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, purple);
+            background-size: 400% 400%;
+            animation: rainbowShift 3s linear infinite;
+        }
+        @keyframes rainbowShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .shop-buy-btn {
+            background: #ffcc00;
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 85px;
+        }
+        .shop-buy-btn.equipped { background: #00ffcc; }
+        .shop-buy-btn.unlocked { background: #ffffff; }
+        .shop-buy-btn.locked-rainbow { background: #444; color: #ff3366; border: 1px solid #ff3366; cursor: not-allowed; font-size: 10px; font-weight: bold; }
+        .shop-buy-btn.locked-white { background: #444; color: #ffffff; border: 1px solid #ffffff; cursor: not-allowed; font-size: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 1. MAIN HOME MENU SCREEN -->
+    <div id="mainMenuScreen" class="popup-screen" style="display: block;">
+        <h2 style="margin-top: 0; margin-bottom: 5px; color: #00ffcc; font-size: 24px;">GAMER MG RUNNER</h2>
+        <p style="font-size: 16px; color: #ffd700; font-weight: bold; margin: 3px 0;">Total Coins: <span id="menuCoins">0</span></p>
+        <p style="font-size: 15px; color: #ff9900; font-weight: bold; margin: 3px 0;">👑 Highest Score: <span id="menuHighScore">0</span></p>
+        
+        <button class="btn play-btn" onclick="startGameFromMenu()">🎮 TAP TO PLAY</button>
+        
+        <!-- Color Shop Section -->
+        <div class="shop-container">
+            <h3 style="margin: 3px 0 8px 0; color: #ffcc00; font-size: 16px;">Character Color Shop</h3>
+            <div id="shopList"></div>
+        </div>
+    </div>
+
+    <!-- 2. GAME OVER SCREEN -->
+    <div id="gameOverScreen" class="popup-screen">
+        <h2 style="margin-top: 0; color: #ff3366;">GAME OVER 💀</h2>
+        <p style="font-size: 15px; margin: 4px 0;">Run Coins: <span id="finalCoins" style="color: #ffd700; font-weight: bold;">0</span></p>
+        <p style="font-size: 15px; margin: 4px 0;">Total Coins: <span id="totalCoinsBalance" style="color: #ffd700; font-weight: bold;">0</span></p>
+        <p style="font-size: 15px; margin: 4px 0;">Final Score: <span id="finalScore" style="color: #00ffcc; font-weight: bold;">0</span></p>
+        <p style="font-size: 15px; margin: 4px 0; color: #ff9900; font-weight: bold;">Best Score: <span id="overHighScore">0</span></p>
+        
+        <button class="btn" onclick="resetGame()">Try Again</button>
+        <button class="btn home-btn" onclick="showHomeMenu()">🏠 Back To Home</button>
+    </div>
+
+    <script>
+        function playSfx(id) { 
+            let s = document.getElementById('sfx-' + id);
+            if(s) { s.currentTime = 0; s.play(); }
+        }
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+
+        let globalCoins = 0; 
+        let currentCharColor = "#ff5722"; 
+        let isRainbowEquipped = false;
+        let rainbowHue = 0; 
+        let highScore = parseInt(localStorage.getItem("mgRunnerHighScore")) || 0; 
+
+        let shopItems = [
+            { id: "orange", name: "Orange", color: "#ff5722", price: 0, unlocked: true, type: "coin" },
+            { id: "green", name: "Green", color: "#5c940d", price: 50, unlocked: false, type: "coin" },
+            { id: "purple", name: "Purple", color: "#9c27b0", price: 100, unlocked: false, type: "coin" },
+            { id: "blue", name: "Blue", color: "#2196f3", price: 200, unlocked: false, type: "coin" },
+            { id: "yellow", name: "Yellow", color: "#ffeb3b", price: 500, unlocked: false, type: "coin" },
+            { id: "white_top", name: "White Top 🏆", color: "#ffffff", price: 5000, unlocked: false, type: "score" },
+            { id: "rainbow", name: "Rainbow 🌈", color: "rainbow", price: 10000, unlocked: false, type: "score" }
+        ];
+
+        let player, obstacles, coins, runCoinCount, distanceScore, gameOver, animationId;
+        let isGameRunning = false;
+        const gameSpeed = 5.0; 
+        const groundY = Math.floor(canvas.height * 0.58); 
+        const groundHeight = canvas.height - groundY;
+
+        function init() {
+            player = { x: 60, y: groundY - 40, width: 30, height: 40, jumping: false, vY: 0 };
+            obstacles = [];
+            coins = [];
+            runCoinCount = 0;
+            distanceScore = 0;
+            gameOver = false;
+            document.getElementById("gameOverScreen").style.display = "none";
+            document.getElementById("mainMenuScreen").style.display = "none";
+        }
+
+        let spawnTimer = 0;
+        function handleSpawning() {
+            spawnTimer++;
+            if (spawnTimer % 90 === 0) { 
+                if (Math.random() < 0.7) {
+                    obstacles.push({ x: canvas.width + 20, y: groundY - 30, width: 25, height: 30 });
+                }
+            }
+            if (spawnTimer % 60 === 0) {
+                if (Math.random() < 0.6) {
+                    coins.push({ x: canvas.width + 20, y: groundY - 110, radius: 10 });
+                }
+            }
+        }
+
+        window.addEventListener("touchstart", (e) => {
+            if (isGameRunning && e.target.tagName !== 'BUTTON' && !player.jumping && !gameOver) {
+                player.vY = -12; player.jumping = true; playSfx('jump');
+            }
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (isGameRunning && e.code === "Space" && !player.jumping && !gameOver) {
+                player.vY = -12; player.jumping = true; playSfx('jump');
+            }
+        });
+
+        function update() {
+            if (gameOver || !isGameRunning) return;
+
+            distanceScore += 1;
+            player.vY += 0.6; 
+            player.y += player.vY;
+            if (player.y >= groundY - player.height) {
+                player.y = groundY - player.height;
+                player.jumping = false;
+                player.vY = 0;
+            }
+
+            handleSpawning();
+
+            let currentScore = Math.floor(distanceScore / 5);
+            if (currentScore > highScore) {
+                highScore = currentScore;
+                localStorage.setItem("mgRunnerHighScore", highScore);
+            }
+
+            if (isRainbowEquipped) {
+                rainbowHue = (rainbowHue + 2) % 360;
+                currentCharColor = `hsl(${rainbowHue}, 100%, 50%)`;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= gameSpeed; 
+                if (player.x < obstacles[i].x + obstacles[i].width &&
+                    player.x + player.width > obstacles[i].x &&
+                    player.y < obstacles[i].y + obstacles[i].height &&
+                    player.y + player.height > obstacles[i].y) {
+                        endGame();
+                }
+                if (obstacles[i].x < -50) obstacles.splice(i, 1);
+            }
+
+            for (let i = coins.length - 1; i >= 0; i--) {
+                coins[i].x -= gameSpeed; 
+                let dX = (player.x + player.width/2) - coins[i].x;
+                let dY = (player.y + player.height/2) - coins[i].y;
+                let distance = Math.sqrt(dX * dX + dY * dY);
+
+                if (distance < player.width/2 + coins[i].radius) {
+                    runCoinCount += 1;
+                    globalCoins += 1; 
+                    coins.splice(i, 1);
+                    playSfx('coin');
+                    continue;
+                }
+                if (coins[i].x < -50) coins.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#70c5ce";
+            ctx.fillRect(0, 0, canvas.width, groundY);
+
+            ctx.fillStyle = "#5c940d";
+            ctx.fillRect(0, groundY, canvas.width, groundHeight);
+
+            ctx.fillStyle = currentCharColor;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.fillStyle = "#333";
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+
+            ctx.fillStyle = "#ffd700";
+            for (let c of coins) {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 22px Arial";
+            ctx.fillText("GAMER MG RUNNER", 20, 45);
+            
+            ctx.font = "bold 18px Arial";
+            ctx.fillStyle = "#ffd700";
+            ctx.fillText("Coins: " + (isGameRunning ? runCoinCount : globalCoins), 20, 75);
+            
+            ctx.fillStyle = "#00ffcc";
+            ctx.fillText("Score: " + Math.floor(distanceScore / 5), 20, 105);
+
+            ctx.fillStyle = "#ff9900";
+            ctx.font = "bold 18px Arial";
+            ctx.textAlign = "right";
+            ctx.fillText("🏆 HIGH: " + highScore, canvas.width - 20, 45);
+            ctx.textAlign = "left"; 
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (!gameOver && isGameRunning) {
+                animationId = requestAnimationFrame(loop);
+            }
+        }
+
+        function endGame() {
+            gameOver = true;
+            isGameRunning = false;
+            playSfx('die');
+            cancelAnimationFrame(animationId);
+            document.getElementById("finalCoins").innerText = runCoinCount;
+            document.getElementById("totalCoinsBalance").innerText = globalCoins;
+            document.getElementById("finalScore").innerText = Math.floor(distanceScore / 5);
+            document.getElementById("overHighScore").innerText = highScore;
+            document.getElementById("gameOverScreen").style.display = "block";
+        }
+
+        function resetGame() {
+            cancelAnimationFrame(animationId);
+            init();
+            isGameRunning = true;
+            playSfx('start');
+            loop();
+        }
+
+        function updateShopUI() {
+            document.getElementById("menuCoins").innerText = globalCoins;
+            document.getElementById("menuHighScore").innerText = highScore; 
+            const shopList = document.getElementById("shopList");
+            shopList.innerHTML = "";
+
+            shopItems.forEach(i => {
+                if(i.type === "score") {
+                    if(highScore >= i.price) i.unlocked = true;
+                    else i.unlocked = false;
+                }
+            });
+
+            shopItems.forEach(item => {
+                const row = document.createElement("div");
+                row.className = "color-item";
+
+                let previewStyle = `background: ${item.color}`;
+                if (item.id === "rainbow") previewStyle = ""; 
+
+                let btnText = item.price + "🪙";
+                let btnClass = "";
+                let clickAction = `handleShopClick('${item.id}')`;
+
+                if (item.type === "score") {
+                    if (item.unlocked) {
+                        let isEquipped = (item.id === "rainbow" && isRainbowEquipped) || (item.id === "white_top" && !isRainbowEquipped && currentCharColor === "#ffffff");
+                        btnText = isEquipped ? "Equipped" : "Equip";
+                        btnClass = isEquipped ? "equipped" : "unlocked";
+                    } else {
+                        btnText = item.id === "rainbow" ? "🏆 Best 10000" : "🏆 Best 5000"; 
+                        btnClass = item.id === "rainbow" ? "locked-rainbow" : "locked-white";
+                        clickAction = ""; 
+                    }
+                } else if (item.unlocked) {
+                    let isEquipped = (!isRainbowEquipped && currentCharColor === item.color);
+                    btnText = isEquipped ? "Equipped" : "Equip";
+                    btnClass = isEquipped ? "equipped" : "unlocked";
+                }
+
+                row.innerHTML = `
+                    <div class="color-preview ${item.id === 'rainbow' ? 'rainbow-preview' : ''}" style="${previewStyle}"></div>
+                    <div style="font-weight:bold; font-size:13px;">${item.name}</div>
+                    <button class="shop-buy-btn ${btnClass}" onclick="${clickAction}">${btnText}</button>
+                `;
+                shopList.appendChild(row);
+            });
+        }
+
+        function handleShopClick(id) {
+            let item = shopItems.find(i => i.id === id);
+            if (!item) return;
+
+            if (item.type === "score") {
+                if (item.unlocked) {
+                    if (item.id === "rainbow") {
+                        isRainbowEquipped = true;
+                    } else {
+                        isRainbowEquipped = false;
+                        currentCharColor = item.color;
+                    }
+                }
+            } else if (item.unlocked) {
+                isRainbowEquipped = false;
+                currentCharColor = item.color;
+            } else {
+                if (globalCoins >= item.price) {
+                    globalCoins -= item.price;
+                    item.unlocked = true;
+                    isRainbowEquipped = false;
+                    currentCharColor = item.color;
+                    alert("Congratulations! " + item.name + " color has been unlocked!");
+                } else {
+                    alert("Not enough coins! Play more to earn coins.");
+                }
+            }
+            updateShopUI();
+            draw();
+            playSfx('buy');
+        }
+
+        function showHomeMenu() {
+            isGameRunning = false;
+            gameOver = false;
+            document.getElementById("gameOverScreen").style.display = "none";
+            document.getElementById("mainMenuScreen").style.display = "block";
+            updateShopUI();
+            draw();
+        }
+
+        function startGameFromMenu() {
+            init();
+            isGameRunning = true;
+            playSfx('start');
+            loop();
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if(!isGameRunning) draw();
+        });
+
+        setInterval(() => {
+            if (!isGameRunning && isRainbowEquipped) {
+                rainbowHue = (rainbowHue + 5) % 360;
+                currentCharColor = `hsl(${rainbowHue}, 100%, 50%)`;
+                draw();
+            }
+        }, 40);
+
+        init();
+        showHomeMenu();
     </script>
-    
-    <h1>MG Gamer 96</h1>
 </body>
 </html>
